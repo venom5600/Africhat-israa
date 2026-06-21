@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#2C2420">
+<title>نظام طلبات المتجر</title>
+
+<!-- PWA: manifest is generated dynamically below (script tag at end of body) so the whole app stays a single file -->
+<link rel="manifest" id="manifestLink">
+
+<!-- iOS-specific PWA support (Safari ignores manifest.json for some properties) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="متجر الأثاث">
+<link rel="apple-touch-icon" id="appleTouchIcon">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛋️</text></svg>">
+<style>
+@font-face{font-family:'Tajawal';src:local('Tajawal');}
+:root{
+  --ink:#2C2420;
+  --ink-soft:#52443B;
+  --cream:#F5EFE6;
+  --cream-deep:#EBE2D2;
+  --wood:#8A6F4E;
+  --wood-light:#C9A876;
+  --olive:#5C6B4F;
+  --olive-light:#7D8C6C;
+  --danger:#A5453C;
+  --danger-bg:#F7E8E5;
+  --ok:#4A6B4F;
+  --ok-bg:#E7EFE3;
+  --warn:#B8893D;
+  --warn-bg:#FBF0DE;
+  --line:#DFD4BE;
+  --shadow:0 2px 8px rgba(44,36,32,0.08), 0 1px 2px rgba(44,36,32,0.06);
+  --shadow-lg:0 8px 30px rgba(44,36,32,0.16);
+  --radius:14px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;
+  background:var(--cream);
+  color:var(--ink);
+  min-height:100vh;
+  padding-bottom:84px;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;}
+input,select,textarea{font-family:inherit;}
+
+/* ============ Top bar ============ */
+.topbar{
+  background:var(--ink);
+  color:var(--cream);
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:var(--shadow);
+}
+.topbar .brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  font-size:18px;
+  letter-spacing:.2px;
+}
+.topbar .brand .logo-emoji{font-size:22px;}
+.topbar .net-status{
+  font-size:11px;
+  padding:4px 10px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.1);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--olive-light);}
+.dot.off{background:#B8893D;}
+
+/* ============ Bottom nav ============ */
+.bottomnav{
+  position:fixed;
+  bottom:0;left:0;right:0;
+  background:#fff;
+  border-top:1px solid var(--line);
+  display:flex;
+  z-index:50;
+  box-shadow:0 -4px 16px rgba(44,36,32,0.08);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.navbtn{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  padding:9px 0 8px;
+  border:none;
+  background:none;
+  color:var(--ink-soft);
+  font-size:10.5px;
+  font-weight:600;
+  cursor:pointer;
+  min-width:0;
+}
+.navbtn .icon{font-size:19px;}
+.navbtn.active{color:var(--olive);}
+.navbtn.active .icon{transform:translateY(-1px);}
+
+/* ============ Layout ============ */
+.page{display:none; max-width:720px; margin:0 auto; padding:18px 16px 30px;}
+.page.active{display:block;}
+.section-title{
+  font-size:15px;
+  font-weight:800;
+  color:var(--ink);
+  margin:22px 0 10px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.section-title .bar{width:4px;height:16px;background:var(--olive);border-radius:3px;}
+.section-title:first-child{margin-top:0;}
+
+.card{
+  background:#fff;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+  margin-bottom:14px;
+}
+
+.field{margin-bottom:14px;}
+.field label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  color:var(--ink-soft);
+  margin-bottom:6px;
+}
+.field label .req{color:var(--danger); margin-right:3px;}
+.field label .opt{color:#A89A85; font-weight:500; font-size:11px;}
+.field input[type=text], .field input[type=tel], .field input[type=number], .field textarea, .field select{
+  width:100%;
+  padding:12px 14px;
+  border:1.5px solid var(--line);
+  border-radius:10px;
+  font-size:15px;
+  background:#FBF8F2;
+  color:var(--ink);
+  transition:border-color .15s, background .15s;
+}
+.field input:focus, .field textarea:focus, .field select:focus{
+  outline:none;
+  border-color:var(--olive);
+  background:#fff;
+}
+.field textarea{resize:vertical; min-height:70px;}
+.field .err-msg{color:var(--danger); font-size:12.5px; margin-top:5px; font-weight:600; display:none;}
+.field.has-error input, .field.has-error textarea{border-color:var(--danger); background:var(--danger-bg);}
+.field.has-error .err-msg{display:block;}
+
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+@media (max-width:420px){.row2{grid-template-columns:1fr;}}
+.row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+@media (max-width:480px){.row3{grid-template-columns:1fr;}}
+
+.remaining-box{
+  background:var(--cream-deep);
+  border-radius:10px;
+  padding:12px 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:4px;
+}
+.remaining-box .lbl{font-size:13px; font-weight:700; color:var(--ink-soft);}
+.remaining-box .val{font-size:19px; font-weight:800; color:var(--olive);}
+.remaining-box.negative .val{color:var(--danger);}
+
+/* images */
+.img-actions{display:flex; gap:10px; margin-bottom:12px;}
+.img-actions button{
+  flex:1;
+  padding:12px 8px;
+  border:1.5px dashed var(--wood);
+  background:#FBF8F2;
+  border-radius:10px;
+  color:var(--wood);
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.img-actions button .icon{font-size:20px;}
+.img-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:8px;}
+.img-thumb{
+  position:relative;
+  width:100%;
+  aspect-ratio:1;
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--cream-deep);
+}
+.img-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.img-thumb .rm{
+  position:absolute; top:3px; left:3px;
+  width:22px;height:22px;
+  background:rgba(165,69,60,0.92);
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  font-size:13px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+
+/* status */
+.status-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:4px 11px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.status-جديد{background:#E3E8F5; color:#3A4B8C;}
+.status-قيد_التجهيز{background:var(--warn-bg); color:var(--warn);}
+.status-جاهز_للتسليم{background:#E0EEF7; color:#2E6E94;}
+.status-تم_التسليم{background:var(--ok-bg); color:var(--ok);}
+.status-ملغي{background:var(--danger-bg); color:var(--danger);}
+
+/* buttons */
+.btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  padding:14px;
+  border-radius:11px;
+  border:none;
+  font-weight:800;
+  font-size:14.5px;
+  cursor:pointer;
+  transition:transform .08s, opacity .15s;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--olive); color:#fff;}
+.btn-whatsapp{background:#3DA354; color:#fff;}
+.btn-secondary{background:var(--cream-deep); color:var(--ink);}
+.btn-outline{background:#fff; color:var(--ink-soft); border:1.5px solid var(--line);}
+.btn-danger-outline{background:#fff; color:var(--danger); border:1.5px solid var(--danger);}
+.btn-sm{padding:9px 10px; font-size:12.5px; border-radius:9px;}
+.btn-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;}
+.btn-stack{display:flex; flex-direction:column; gap:10px; margin-top:14px;}
+
+/* stat chips */
+.stats-row{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:6px;}
+@media(min-width:480px){.stats-row{grid-template-columns:repeat(3,1fr);}}
+.stat-chip{
+  background:#fff;
+  border-radius:12px;
+  padding:13px 12px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.stat-chip .num{font-size:22px; font-weight:800; color:var(--ink);}
+.stat-chip .lbl{font-size:11.5px; color:var(--ink-soft); font-weight:600; margin-top:2px;}
+.stat-chip.accent .num{color:var(--olive);}
+
+/* search/filter bar */
+.filterbar{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+.filterbar input{flex:2; min-width:140px;}
+.filterbar select{flex:1; min-width:110px;}
+
+/* order list item */
+.order-item{
+  background:#fff;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:14px;
+  margin-bottom:10px;
+}
+.order-item .top-row{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;}
+.order-item .order-id{font-weight:800; font-size:13.5px; color:var(--wood);}
+.order-item .order-date{font-size:11.5px; color:#A89A85; margin-top:2px;}
+.order-item .customer{font-weight:700; font-size:15px; margin-bottom:2px;}
+.order-item .phone{font-size:13px; color:var(--ink-soft); direction:ltr; display:inline-block;}
+.order-item .product{font-size:13.5px; color:var(--ink-soft); margin-top:4px;}
+.order-item .money-row{display:flex; gap:14px; margin-top:10px; font-size:12.5px; flex-wrap:wrap;}
+.order-item .money-row b{font-weight:800;}
+.order-item .actions{display:flex; gap:6px; margin-top:11px; flex-wrap:wrap;}
+.order-item .actions button{flex:1; min-width:64px;}
+
+.empty-state{
+  text-align:center;
+  padding:50px 20px;
+  color:var(--ink-soft);
+}
+.empty-state .emo{font-size:42px; margin-bottom:10px;}
+.empty-state .t{font-weight:700; font-size:15px; margin-bottom:4px;}
+.empty-state .s{font-size:13px; color:#A89A85;}
+
+/* modal */
+.modal-overlay{
+  position:fixed; inset:0;
+  background:rgba(44,36,32,0.55);
+  z-index:200;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+}
+.modal-overlay.show{display:flex;}
+.modal-sheet{
+  background:#fff;
+  width:100%;
+  max-width:720px;
+  max-height:88vh;
+  overflow-y:auto;
+  border-radius:20px 20px 0 0;
+  padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+  animation:slideUp .22s ease;
+}
+@keyframes slideUp{from{transform:translateY(30px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+.modal-handle{width:40px; height:4px; background:var(--line); border-radius:4px; margin:0 auto 14px;}
+.modal-title{font-size:17px; font-weight:800; margin-bottom:14px;}
+.toast{
+  position:fixed; bottom:96px; left:50%; transform:translateX(-50%);
+  background:var(--ink); color:#fff;
+  padding:11px 22px; border-radius:30px;
+  font-size:13.5px; font-weight:700;
+  z-index:300; box-shadow:var(--shadow-lg);
+  opacity:0; transition:opacity .25s, transform .25s;
+  pointer-events:none;
+  white-space:nowrap;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+
+/* settings page specifics */
+.logo-preview{
+  width:72px;height:72px;border-radius:14px;
+  background:var(--cream-deep);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px; overflow:hidden; margin-bottom:10px;
+}
+.logo-preview img{width:100%;height:100%;object-fit:cover;}
+
+.dash-list-row{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--cream-deep); font-size:13.5px;}
+.dash-list-row:last-child{border-bottom:none;}
+
+/* ============ Profit page ============ */
+.profit-filterbar{display:flex; gap:8px; margin-bottom:16px;}
+.profit-filterbar select{flex:1;}
+.profit-hero{
+  background:linear-gradient(135deg, var(--ink) 0%, #3D332B 100%);
+  color:var(--cream);
+  border-radius:18px;
+  padding:22px 20px;
+  margin-bottom:16px;
+  box-shadow:var(--shadow-lg);
+}
+.profit-hero .ph-label{font-size:12.5px; opacity:.75; font-weight:600;}
+.profit-hero .ph-amount{font-size:32px; font-weight:800; margin:4px 0 14px; color:var(--wood-light);}
+.profit-hero .ph-sub-row{display:flex; gap:18px; flex-wrap:wrap; padding-top:12px; border-top:1px solid rgba(255,255,255,0.12);}
+.profit-hero .ph-sub{display:flex; flex-direction:column; gap:2px;}
+.profit-hero .ph-sub .k{font-size:11px; opacity:.7;}
+.profit-hero .ph-sub .v{font-size:15px; font-weight:800;}
+
+.profit-stats-row{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:6px;}
+@media(min-width:480px){.profit-stats-row{grid-template-columns:repeat(4,1fr);}}
+.profit-chip{background:#fff; border-radius:12px; padding:13px 10px; box-shadow:var(--shadow); text-align:center;}
+.profit-chip .num{font-size:18px; font-weight:800; color:var(--ink);}
+.profit-chip .lbl{font-size:10.5px; color:var(--ink-soft); font-weight:600; margin-top:3px; line-height:1.3;}
+.profit-chip.up .num{color:var(--ok);}
+.profit-chip.down .num{color:var(--danger);}
+
+.chart-wrap{
+  background:#fff; border-radius:var(--radius); box-shadow:var(--shadow);
+  padding:16px 14px 10px; margin-bottom:14px;
+}
+.bar-chart{display:flex; align-items:flex-end; gap:5px; height:140px; padding-top:6px;}
+.bar-chart .bc-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+.bar-chart .bc-bar{
+  width:100%; max-width:26px; border-radius:5px 5px 2px 2px;
+  background:linear-gradient(180deg, var(--wood-light), var(--wood));
+  min-height:3px;
+  transition:height .3s ease;
+  position:relative;
+}
+.bar-chart .bc-bar.empty-bar{background:var(--cream-deep);}
+.bar-chart .bc-lbl{font-size:9.5px; color:var(--ink-soft); font-weight:600; white-space:nowrap;}
+
+.breakdown-row{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:11px 0; border-bottom:1px solid var(--cream-deep); font-size:13.5px;
+}
+.breakdown-row:last-child{border-bottom:none;}
+.breakdown-row .br-left{display:flex; align-items:center; gap:9px;}
+.breakdown-row .br-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.breakdown-row .br-name{font-weight:700;}
+.breakdown-row .br-count{font-size:11.5px; color:#A89A85;}
+.breakdown-row .br-amount{font-weight:800; color:var(--ink);}
+
+.top-product-row{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--cream-deep); font-size:13.5px; align-items:center;}
+.top-product-row:last-child{border-bottom:none;}
+.top-product-row .tp-rank{
+  width:22px;height:22px;border-radius:50%;background:var(--cream-deep);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--wood);
+  flex-shrink:0;
+}
+.top-product-row .tp-name{flex:1; padding:0 10px; font-weight:600;}
+.top-product-row .tp-amount{font-weight:800; color:var(--olive); white-space:nowrap;}
+
+/* print area (hidden on screen) */
+#printArea{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{display:block; position:absolute; top:0; right:0; left:0; padding:20px; direction:rtl;}
+}
+
+a{color:inherit; text-decoration:none;}
+.hint{font-size:11.5px; color:#A89A85; margin-top:4px;}
+.input-error-global{background:var(--danger-bg); color:var(--danger); padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700; margin-bottom:12px; display:none;}
+.input-error-global.show{display:block;}
+.swal-confirm-row{display:flex; gap:10px; margin-top:16px;}
+.badge-count{
+  background:var(--danger); color:#fff; font-size:10px; font-weight:800;
+  border-radius:10px; padding:1px 6px; position:relative; top:-8px; right:-4px;
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOCK SCREEN ===================== -->
+<div id="lockScreen" style="position:fixed; inset:0; background:var(--ink); z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div style="width:100%; max-width:340px; text-align:center;">
+    <div style="font-size:48px; margin-bottom:14px;">🛋️</div>
+    <div style="color:var(--cream); font-size:18px; font-weight:800; margin-bottom:6px;" id="lockStoreName">متجر الأثاث</div>
+    <div style="color:#A89A85; font-size:13px; margin-bottom:26px;" id="lockSubtitle">أدخل كلمة السر للدخول إلى نظام الطلبات</div>
+
+    <input type="password" id="lockPasswordInput" placeholder="كلمة السر" inputmode="numeric"
+      style="width:100%; padding:14px 16px; border-radius:12px; border:none; font-size:18px; text-align:center; background:#3D332B; color:#fff; margin-bottom:10px; letter-spacing:3px;">
+    <div id="lockErrorMsg" style="color:#E08A7D; font-size:13px; font-weight:700; margin-bottom:14px; display:none;">⚠️ كلمة السر غير صحيحة</div>
+
+    <button class="btn btn-primary" id="lockUnlockBtn" style="margin-bottom:10px;">دخول 🔓</button>
+    <button class="btn btn-outline" id="lockSetupBtn" style="display:none; background:transparent; border-color:#52443B; color:#A89A85;">تعيين كلمة سر جديدة</button>
+
+    <div id="lockForgotRow" style="margin-top:18px; font-size:12px; color:#7A6C5D;">
+      نسيت كلمة السر؟ <a href="#" id="lockResetLink" style="color:#C9A876; font-weight:700;">إعادة تعيين</a>
+    </div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+<div class="topbar">
+  <div class="brand"><span class="logo-emoji">🛋️</span><span id="storeNameTop">متجر الأثاث</span></div>
+  <div class="net-status"><span class="dot off" id="netDot"></span><span id="netText">يعمل دون إنترنت</span></div>
+</div>
+
+<!-- ===================== PAGE: NEW ORDER ===================== -->
+<div class="page active" id="page-new">
+
+  <div class="input-error-global" id="paymentErrorBox">⚠️ المبلغ المقدم أكبر من ثمن المنتج. صحّح القيمة قبل الحفظ.</div>
+
+  <div class="section-title"><span class="bar"></span>بيانات الزبون</div>
+  <div class="card">
+    <div class="field">
+      <label>اسم الزبون <span class="opt">(اختياري)</span></label>
+      <input type="text" id="customerName" placeholder="مثال: محمد العلوي">
+    </div>
+    <div class="field" id="phoneField">
+      <label><span class="req">*</span>رقم الهاتف</label>
+      <input type="tel" id="customerPhone" placeholder="0612345678" inputmode="numeric" maxlength="20">
+      <div class="err-msg">أدخل أرقاماً فقط، رقم الهاتف إجباري</div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>بيانات الطلب</div>
+  <div class="card">
+    <div class="field" id="productField">
+      <label><span class="req">*</span>اسم المنتج</label>
+      <input type="text" id="productName" placeholder="مثال: طاولة طعام خشبية">
+      <div class="err-msg">اسم المنتج إجباري</div>
+    </div>
+    <div class="field">
+      <label>ملاحظات إضافية <span class="opt">(اختياري)</span></label>
+      <textarea id="orderNotes" placeholder="مثال: التسليم يوم الجمعة"></textarea>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>الصور</div>
+  <div class="card">
+    <div class="img-actions">
+      <button type="button" onclick="document.getElementById('fileUpload').click()">
+        <span class="icon">🖼️</span>رفع من المعرض
+      </button>
+      <button type="button" onclick="document.getElementById('cameraCapture').click()">
+        <span class="icon">📷</span>التقاط صورة
+      </button>
+    </div>
+    <input type="file" id="fileUpload" accept="image/jpeg,image/jpg,image/png,image/webp" multiple style="display:none">
+    <input type="file" id="cameraCapture" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none">
+    <div class="img-grid" id="imgGrid"></div>
+    <div class="hint" id="imgHint">الصيغ المدعومة: JPG, JPEG, PNG, WEBP</div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>بيانات الدفع</div>
+  <div class="card">
+    <div class="row2">
+      <div class="field" id="priceField">
+        <label><span class="req">*</span>ثمن المنتج</label>
+        <input type="number" id="orderPrice" placeholder="0" min="0" step="0.01" inputmode="decimal">
+        <div class="err-msg">أدخل ثمن المنتج</div>
+      </div>
+      <div class="field">
+        <label>المبلغ المقدم <span class="opt">(اختياري)</span></label>
+        <input type="number" id="orderPaid" placeholder="0" min="0" step="0.01" inputmode="decimal">
+      </div>
+    </div>
+    <div class="remaining-box" id="remainingBox">
+      <span class="lbl">المبلغ المتبقي</span>
+      <span class="val" id="remainingVal">0.00 <span id="remCur">درهم</span></span>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>حالة الطلب</div>
+  <div class="card">
+    <div class="field" style="margin-bottom:0">
+      <select id="orderStatus">
+        <option value="جديد" selected>جديد</option>
+        <option value="قيد التجهيز">قيد التجهيز</option>
+        <option value="جاهز للتسليم">جاهز للتسليم</option>
+        <option value="تم التسليم">تم التسليم</option>
+        <option value="ملغي">ملغي</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-stack">
+    <button class="btn btn-primary" id="saveOrderBtn" onclick="saveOrder()">💾 حفظ الطلب</button>
+    <div class="btn-grid">
+      <button class="btn btn-whatsapp" onclick="sendToWhatsApp()">📤 إرسال إلى واتساب</button>
+      <button class="btn btn-secondary" onclick="copyMessage()">📋 نسخ الرسالة</button>
+    </div>
+    <div class="btn-grid">
+      <button class="btn btn-outline" onclick="shareDetailFileForCurrentOrder()">📎 مشاركة ملف التفاصيل</button>
+      <button class="btn btn-outline" onclick="printOrderPDF()">🖨️ طباعة PDF</button>
+    </div>
+    <div class="hint" style="text-align:center;">ملف التفاصيل صفحة مستقلة تعمل دون إنترنت، مناسبة لإرسالها للمدير</div>
+  </div>
+</div>
+
+<!-- ===================== PAGE: ORDERS LIST ===================== -->
+<div class="page" id="page-list">
+  <div class="stats-row">
+    <div class="stat-chip"><div class="num" id="statTotal">0</div><div class="lbl">إجمالي الطلبات</div></div>
+    <div class="stat-chip accent"><div class="num" id="statNew">0</div><div class="lbl">جديدة</div></div>
+    <div class="stat-chip"><div class="num" id="statProgress">0</div><div class="lbl">قيد التجهيز</div></div>
+    <div class="stat-chip"><div class="num" id="statDone">0</div><div class="lbl">تم التسليم</div></div>
+    <div class="stat-chip"><div class="num" id="statCancelled">0</div><div class="lbl">ملغاة</div></div>
+  </div>
+
+  <div class="filterbar">
+    <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم، الهاتف أو رقم الطلب" oninput="renderOrdersList()">
+    <select id="filterStatus" onchange="renderOrdersList()">
+      <option value="">كل الحالات</option>
+      <option value="جديد">جديد</option>
+      <option value="قيد التجهيز">قيد التجهيز</option>
+      <option value="جاهز للتسليم">جاهز للتسليم</option>
+      <option value="تم التسليم">تم التسليم</option>
+      <option value="ملغي">ملغي</option>
+    </select>
+    <select id="sortOrder" onchange="renderOrdersList()">
+      <option value="desc">الأحدث أولاً</option>
+      <option value="asc">الأقدم أولاً</option>
+    </select>
+  </div>
+
+  <div id="ordersListContainer"></div>
+</div>
+
+<!-- ===================== PAGE: DASHBOARD ===================== -->
+<div class="page" id="page-dashboard">
+  <div class="stats-row">
+    <div class="stat-chip"><div class="num" id="dTotal">0</div><div class="lbl">عدد الطلبات الكلي</div></div>
+    <div class="stat-chip accent"><div class="num" id="dNew">0</div><div class="lbl">طلبات جديدة</div></div>
+    <div class="stat-chip"><div class="num" id="dDelivered">0</div><div class="lbl">طلبات مُسلَّمة</div></div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>المبالغ</div>
+  <div class="card">
+    <div class="dash-list-row"><span>💰 مجموع المبالغ المستلمة</span><b id="dCollected">0.00</b></div>
+    <div class="dash-list-row"><span>📋 مجموع المبالغ المتبقية</span><b id="dRemaining">0.00</b></div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>آخر الطلبات</div>
+  <div class="card" id="recentOrdersCard">
+    <div class="empty-state"><div class="emo">📦</div><div class="t">لا توجد طلبات بعد</div></div>
+  </div>
+</div>
+
+<!-- ===================== PAGE: PROFIT TRACKING ===================== -->
+<div class="page" id="page-profit">
+
+  <div class="profit-filterbar">
+    <select id="profitPeriodType" onchange="onProfitPeriodTypeChange()">
+      <option value="month">عرض شهري</option>
+      <option value="year">عرض سنوي</option>
+      <option value="all">كل الفترات</option>
+    </select>
+    <select id="profitMonth" onchange="renderProfitPage()"></select>
+    <select id="profitYear" onchange="renderProfitPage()"></select>
+  </div>
+
+  <div class="profit-hero">
+    <div class="ph-label" id="profitHeroLabel">صافي المداخيل المحصّلة</div>
+    <div class="ph-amount" id="profitHeroAmount">0.00 درهم</div>
+    <div class="ph-sub-row">
+      <div class="ph-sub"><span class="k">قيمة الطلبات الكلية</span><span class="v" id="profitTotalValue">0.00</span></div>
+      <div class="ph-sub"><span class="k">المتبقي (غير محصّل)</span><span class="v" id="profitOutstanding">0.00</span></div>
+      <div class="ph-sub"><span class="k">عدد الطلبات</span><span class="v" id="profitOrderCount">0</span></div>
+    </div>
+  </div>
+
+  <div class="profit-stats-row">
+    <div class="profit-chip up"><div class="num" id="profitAvgOrder">0.00</div><div class="lbl">متوسط قيمة الطلب</div></div>
+    <div class="profit-chip"><div class="num" id="profitCollectionRate">0%</div><div class="lbl">نسبة التحصيل</div></div>
+    <div class="profit-chip down"><div class="num" id="profitCancelledLoss">0.00</div><div class="lbl">قيمة الطلبات الملغاة</div></div>
+    <div class="profit-chip"><div class="num" id="profitBestMonth">—</div><div class="lbl">أفضل شهر (مداخيل)</div></div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>المداخيل عبر الزمن</div>
+  <div class="chart-wrap">
+    <div class="bar-chart" id="profitBarChart"></div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>توزيع الطلبات حسب الحالة</div>
+  <div class="card" id="profitStatusBreakdown"></div>
+
+  <div class="section-title"><span class="bar"></span>المنتجات الأكثر تحقيقاً للمداخيل</div>
+  <div class="card" id="profitTopProducts"></div>
+
+  <div class="section-title"><span class="bar"></span>أداء الزبائن</div>
+  <div class="card">
+    <div class="dash-list-row"><span>🧾 عدد الزبائن (طلب واحد على الأقل)</span><b id="profitUniqueCustomers">0</b></div>
+    <div class="dash-list-row"><span>🔁 زبائن بأكثر من طلب</span><b id="profitRepeatCustomers">0</b></div>
+  </div>
+</div>
+
+<!-- ===================== PAGE: SETTINGS ===================== -->
+<div class="page" id="page-settings">
+  <div class="section-title"><span class="bar"></span>إعدادات المتجر</div>
+  <div class="card">
+    <div class="field">
+      <label>شعار المتجر</label>
+      <div class="logo-preview" id="logoPreview">🛋️</div>
+      <input type="file" id="logoUpload" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+      <button class="btn btn-outline btn-sm" style="width:auto; display:inline-flex; padding:9px 16px;" onclick="document.getElementById('logoUpload').click()">تغيير الشعار</button>
+    </div>
+    <div class="field">
+      <label>اسم المتجر</label>
+      <input type="text" id="settingsStoreName" placeholder="متجر الأثاث">
+    </div>
+    <div class="field">
+      <label>رقم واتساب المستلم</label>
+      <input type="tel" id="settingsWhatsapp" placeholder="212612345678 (بدون + أو أصفار في البداية)" inputmode="numeric">
+      <div class="hint">أدخل الرقم بصيغة دولية، مثال: 212612345678</div>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label>عملة المتجر</label>
+      <input type="text" id="settingsCurrency" placeholder="درهم">
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+
+  <div class="section-title"><span class="bar"></span>النسخ الاحتياطي</div>
+  <div class="card">
+    <p style="font-size:13px; color:var(--ink-soft); margin:0 0 12px;">جميع بياناتك مخزّنة محلياً على هذا الهاتف فقط. يُنصح بإنشاء نسخة احتياطية بشكل دوري.</p>
+    <div class="btn-grid">
+      <button class="btn btn-secondary" onclick="exportBackup()">⬇️ تصدير نسخة احتياطية</button>
+      <button class="btn btn-outline" onclick="document.getElementById('restoreFile').click()">⬆️ استعادة نسخة</button>
+    </div>
+    <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="importBackup(event)">
+  </div>
+
+  <div class="section-title"><span class="bar"></span>الأمان</div>
+  <div class="card">
+    <button class="btn btn-outline" onclick="lockAppNow()">🔒 قفل التطبيق الآن</button>
+    <div class="hint" style="text-align:center; margin-top:8px;">استعمل هذا الزر قبل تسليم الهاتف لشخص آخر</div>
+  </div>
+
+  <div class="section-title"><span class="bar"></span>حول التطبيق</div>
+  <div class="card">
+    <p style="font-size:12.5px; color:#A89A85; margin:0;">يعمل هذا التطبيق بالكامل دون اتصال بالإنترنت. كل الطلبات والصور والإعدادات محفوظة داخل هذا الهاتف فقط (لا يوجد خادم أو سحابة). الإنترنت مطلوب فقط عند الضغط على "إرسال إلى واتساب".</p>
+  </div>
+</div>
+
+<div class="bottomnav">
+  <button class="navbtn active" data-page="page-new" onclick="goToPage('page-new')"><span class="icon">➕</span>طلب جديد</button>
+  <button class="navbtn" data-page="page-list" onclick="goToPage('page-list')"><span class="icon">📋</span>الطلبات</button>
+  <button class="navbtn" data-page="page-dashboard" onclick="goToPage('page-dashboard')"><span class="icon">📊</span>إحصائيات</button>
+  <button class="navbtn" data-page="page-profit" onclick="goToPage('page-profit')"><span class="icon">💰</span>الأرباح</button>
+  <button class="navbtn" data-page="page-settings" onclick="goToPage('page-settings')"><span class="icon">⚙️</span>إعدادات</button>
+</div>
+
+<!-- Modal: order detail / edit -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">تفاصيل الطلب</div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-sheet" style="max-height:auto;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚠️ تأكيد الحذف</div>
+    <p style="font-size:14px; color:var(--ink-soft);">هل تريد حذف هذا الطلب نهائياً؟ لا يمكن التراجع عن هذا الإجراء.</p>
+    <div class="swal-confirm-row">
+      <button class="btn btn-outline" onclick="closeConfirmModal()" style="flex:1">إلغاء</button>
+      <button class="btn btn-danger-outline" id="confirmDeleteBtn" style="flex:1">حذف نهائياً</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+</div><!-- /appRoot -->
+
+<script>
+/* =========================================================
+   نظام إدارة طلبات متجر الأثاث — يعمل بالكامل دون إنترنت
+   التخزين: IndexedDB (محلي على الهاتف، لا سيرفر، لا سحابة)
+   ========================================================= */
+
+const DB_NAME = 'furnitureOrdersDB';
+const DB_VERSION = 1;
+let db = null;
+let currentImages = []; // {dataUrl, type}
+let editingOrderId = null;
+let allOrdersCache = [];
+
+// ---------- IndexedDB bootstrap ----------
+function openDB(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const _db = e.target.result;
+      if(!_db.objectStoreNames.contains('orders')){
+        const store = _db.createObjectStore('orders', { keyPath: 'id' });
+        store.createIndex('orderNumber', 'orderNumber', { unique: true });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+      if(!_db.objectStoreNames.contains('settings')){
+        _db.createObjectStore('settings', { keyPath: 'id' });
+      }
+      if(!_db.objectStoreNames.contains('meta')){
+        _db.createObjectStore('meta', { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function txStore(storeName, mode='readonly'){
+  return db.transaction(storeName, mode).objectStore(storeName);
+}
+
+function dbGetAll(storeName){
+  return new Promise((resolve, reject) => {
+    const store = txStore(storeName);
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = (e) => reject(e);
+  });
+}
+function dbGet(storeName, key){
+  return new Promise((resolve, reject) => {
+    const req = txStore(storeName).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = (e) => reject(e);
+  });
+}
+function dbPut(storeName, value){
+  return new Promise((resolve, reject) => {
+    const req = txStore(storeName, 'readwrite').put(value);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+function dbDelete(storeName, key){
+  return new Promise((resolve, reject) => {
+    const req = txStore(storeName, 'readwrite').delete(key);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e);
+  });
+}
+
+// ---------- App state / settings ----------
+let settings = { id:'main', storeName:'متجر الأثاث', whatsappNumber:'', currency:'درهم', logo:'' };
+
+async function loadSettings(){
+  const s = await dbGet('settings', 'main');
+  if(s) settings = s;
+  document.getElementById('storeNameTop').textContent = settings.storeName || 'متجر الأثاث';
+  document.getElementById('settingsStoreName').value = settings.storeName || '';
+  document.getElementById('settingsWhatsapp').value = settings.whatsappNumber || '';
+  document.getElementById('settingsCurrency').value = settings.currency || 'درهم';
+  document.getElementById('remCur').textContent = settings.currency || 'درهم';
+  if(settings.logo){
+    document.getElementById('logoPreview').innerHTML = `<img src="${settings.logo}">`;
+  }
+}
+
+async function saveSettings(){
+  settings.storeName = document.getElementById('settingsStoreName').value.trim() || 'متجر الأثاث';
+  settings.whatsappNumber = document.getElementById('settingsWhatsapp').value.replace(/\D/g,'');
+  settings.currency = document.getElementById('settingsCurrency').value.trim() || 'درهم';
+  settings.id = 'main';
+  await dbPut('settings', settings);
+  document.getElementById('storeNameTop').textContent = settings.storeName;
+  document.getElementById('remCur').textContent = settings.currency;
+  setupPWA(); // refresh manifest/title in case store name changed
+  showToast('✅ تم حفظ الإعدادات');
+}
+
+function handleLogoUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    settings.logo = reader.result;
+    document.getElementById('logoPreview').innerHTML = `<img src="${reader.result}">`;
+    await dbPut('settings', settings);
+    showToast('✅ تم تحديث الشعار');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---------- Order number generator ----------
+async function getNextOrderNumber(){
+  let meta = await dbGet('meta', 'counter');
+  let next = meta ? meta.value + 1 : 1;
+  await dbPut('meta', { key:'counter', value: next });
+  return 'ORD-' + String(next).padStart(6, '0');
+}
+
+// ---------- Navigation ----------
+function goToPage(pageId){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.navbtn[data-page="${pageId}"]`).classList.add('active');
+  if(pageId === 'page-list') renderOrdersList();
+  if(pageId === 'page-dashboard') renderDashboard();
+  if(pageId === 'page-profit') renderProfitPage();
+  window.scrollTo(0,0);
+}
+
+// ---------- Toast ----------
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ---------- Image handling ----------
+const ALLOWED_TYPES = ['image/jpeg','image/jpg','image/png','image/webp'];
+
+function fileToDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFiles(fileList){
+  const hint = document.getElementById('imgHint');
+  let rejected = false;
+  for(const file of fileList){
+    if(!ALLOWED_TYPES.includes(file.type)){
+      rejected = true;
+      continue;
+    }
+    const dataUrl = await fileToDataUrl(file);
+    currentImages.push({ dataUrl, type: file.type });
+  }
+  if(rejected){
+    hint.textContent = '⚠️ تم تجاهل ملف بصيغة غير مدعومة. الصيغ المسموحة: JPG, JPEG, PNG, WEBP';
+    hint.style.color = 'var(--danger)';
+  } else {
+    hint.textContent = 'الصيغ المدعومة: JPG, JPEG, PNG, WEBP';
+    hint.style.color = '#A89A85';
+  }
+  renderImageGrid();
+}
+
+document.getElementById('fileUpload').addEventListener('change', (e) => {
+  handleFiles(e.target.files);
+  e.target.value = '';
+});
+document.getElementById('cameraCapture').addEventListener('change', (e) => {
+  handleFiles(e.target.files);
+  e.target.value = '';
+});
+
+function renderImageGrid(){
+  const grid = document.getElementById('imgGrid');
+  grid.innerHTML = currentImages.map((img, i) => `
+    <div class="img-thumb">
+      <img src="${img.dataUrl}">
+      <button class="rm" onclick="removeImage(${i})">✕</button>
+    </div>
+  `).join('');
+}
+function removeImage(i){
+  currentImages.splice(i,1);
+  renderImageGrid();
+}
+
+// ---------- Payment calculation ----------
+function calcRemaining(){
+  const price = parseFloat(document.getElementById('orderPrice').value) || 0;
+  const paid = parseFloat(document.getElementById('orderPaid').value) || 0;
+  const remaining = price - paid;
+  const box = document.getElementById('remainingBox');
+  const errBox = document.getElementById('paymentErrorBox');
+  document.getElementById('remainingVal').innerHTML = remaining.toFixed(2) + ' <span id="remCur">' + (settings.currency||'درهم') + '</span>';
+  if(paid > price && price > 0){
+    box.classList.add('negative');
+    errBox.classList.add('show');
+  } else {
+    box.classList.remove('negative');
+    errBox.classList.remove('show');
+  }
+  return { price, paid, remaining, invalid: paid > price };
+}
+document.getElementById('orderPrice').addEventListener('input', calcRemaining);
+document.getElementById('orderPaid').addEventListener('input', calcRemaining);
+
+// phone validation: digits only
+document.getElementById('customerPhone').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/[^\d]/g, '');
+});
+document.getElementById('settingsWhatsapp').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/[^\d]/g, '');
+});
+
+// ---------- Form validation ----------
+function clearFieldErrors(){
+  document.querySelectorAll('.field').forEach(f => f.classList.remove('has-error'));
+}
+function validateForm(){
+  clearFieldErrors();
+  let valid = true;
+  const phone = document.getElementById('customerPhone').value.trim();
+  const product = document.getElementById('productName').value.trim();
+  const { invalid: paymentInvalid } = calcRemaining();
+  const price = document.getElementById('orderPrice').value;
+
+  if(!phone || !/^\d+$/.test(phone)){
+    document.getElementById('phoneField').classList.add('has-error');
+    valid = false;
+  }
+  if(!product){
+    document.getElementById('productField').classList.add('has-error');
+    valid = false;
+  }
+  if(!price || parseFloat(price) <= 0){
+    document.getElementById('priceField').classList.add('has-error');
+    document.querySelector('#priceField .err-msg').textContent = 'أدخل ثمن صحيح للمنتج';
+    valid = false;
+  }
+  if(paymentInvalid){
+    valid = false;
+    showToast('⚠️ المبلغ المقدم أكبر من الثمن');
+  }
+  return valid;
+}
+
+// ---------- Build order object from form ----------
+function buildOrderFromForm(){
+  const { price, paid, remaining } = calcRemaining();
+  return {
+    customerName: document.getElementById('customerName').value.trim(),
+    phone: document.getElementById('customerPhone').value.trim(),
+    productName: document.getElementById('productName').value.trim(),
+    notes: document.getElementById('orderNotes').value.trim(),
+    images: [...currentImages],
+    price, paid, remaining,
+    status: document.getElementById('orderStatus').value
+  };
+}
+
+function resetForm(){
+  document.getElementById('customerName').value = '';
+  document.getElementById('customerPhone').value = '';
+  document.getElementById('productName').value = '';
+  document.getElementById('orderNotes').value = '';
+  document.getElementById('orderPrice').value = '';
+  document.getElementById('orderPaid').value = '';
+  document.getElementById('orderStatus').value = 'جديد';
+  currentImages = [];
+  renderImageGrid();
+  calcRemaining();
+  clearFieldErrors();
+  editingOrderId = null;
+  document.getElementById('saveOrderBtn').textContent = '💾 حفظ الطلب';
+}
+
+// ---------- Save order ----------
+async function saveOrder(){
+  if(!validateForm()){
+    showToast('⚠️ تحقق من الحقول المطلوبة');
+    return;
+  }
+  const data = buildOrderFromForm();
+  const now = new Date();
+
+  if(editingOrderId){
+    const existing = await dbGet('orders', editingOrderId);
+    existing.customerName = data.customerName;
+    existing.phone = data.phone;
+    existing.productName = data.productName;
+    existing.notes = data.notes;
+    existing.images = data.images;
+    existing.price = data.price;
+    existing.paid = data.paid;
+    existing.remaining = data.remaining;
+    existing.status = data.status;
+    existing.updatedAt = now.toISOString();
+    await dbPut('orders', existing);
+    showToast('✅ تم تحديث الطلب ' + existing.orderNumber);
+    resetForm();
+    goToPage('page-list');
+  } else {
+    const orderNumber = await getNextOrderNumber();
+    const order = {
+      id: 'o_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+      orderNumber,
+      ...data,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
+    };
+    await dbPut('orders', order);
+    showToast('✅ تم حفظ الطلب ' + orderNumber);
+    resetForm();
+  }
+}
+
+// ---------- Standalone order detail page (works offline via data: URL) ----------
+function buildOrderDetailHTML(order){
+  const cur = settings.currency || 'درهم';
+  const storeName = settings.storeName || 'متجر الأثاث';
+  const statusColors = {
+    'جديد':['#E3E8F5','#3A4B8C'], 'قيد التجهيز':['#FBF0DE','#B8893D'],
+    'جاهز للتسليم':['#E0EEF7','#2E6E94'], 'تم التسليم':['#E7EFE3','#4A6B4F'], 'ملغي':['#F7E8E5','#A5453C']
+  };
+  const [bg, fg] = statusColors[order.status] || ['#eee','#333'];
+  const esc = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>طلب ${esc(order.orderNumber)} - ${esc(storeName)}</title>
+<style>
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif; background:#F5EFE6; color:#2C2420; padding:18px; line-height:1.6;}
+.wrap{max-width:520px; margin:0 auto;}
+.head{background:#2C2420; color:#F5EFE6; padding:20px; border-radius:16px 16px 0 0;}
+.head .store{font-size:14px; opacity:.8; font-weight:700;}
+.head .ordno{font-size:22px; font-weight:800; color:#C9A876; margin-top:4px;}
+.body-card{background:#fff; border-radius:0 0 16px 16px; padding:20px; box-shadow:0 4px 20px rgba(44,36,32,0.1);}
+.status-pill{display:inline-block; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:800; background:${bg}; color:${fg}; margin-bottom:18px;}
+.row{display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #EBE2D2; font-size:14.5px;}
+.row:last-child{border-bottom:none;}
+.row .k{color:#52443B; font-weight:700;}
+.row .v{font-weight:700; text-align:left;}
+.section-lbl{font-size:12px; font-weight:800; color:#8A6F4E; margin:18px 0 8px; text-transform:uppercase; letter-spacing:.3px;}
+.notes-box{background:#F5EFE6; border-radius:10px; padding:14px; font-size:14px; color:#52443B;}
+.money-summary{display:flex; gap:10px; margin-top:6px;}
+.money-box{flex:1; background:#F5EFE6; border-radius:10px; padding:12px; text-align:center;}
+.money-box .ml{font-size:11px; color:#8A6F4E; font-weight:700;}
+.money-box .mv{font-size:16px; font-weight:800; margin-top:3px;}
+.money-box.remaining .mv{color:#A5453C;}
+.money-box.paid .mv{color:#4A6B4F;}
+.foot{text-align:center; font-size:11.5px; color:#A89A85; margin-top:16px; padding:0 10px;}
+.imgs-note{background:#FBF0DE; color:#B8893D; border-radius:10px; padding:12px 14px; font-size:13px; font-weight:700; margin-top:14px; text-align:center;}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="store">🛋️ ${esc(storeName)}</div>
+    <div class="ordno">${esc(order.orderNumber)}</div>
+  </div>
+  <div class="body-card">
+    <span class="status-pill">📌 ${esc(order.status)}</span>
+
+    <div class="section-lbl">بيانات الزبون</div>
+    <div class="row"><span class="k">👤 الاسم</span><span class="v">${esc(order.customerName || 'غير محدد')}</span></div>
+    <div class="row"><span class="k">📞 الهاتف</span><span class="v" style="direction:ltr; display:inline-block;">${esc(order.phone)}</span></div>
+
+    <div class="section-lbl">بيانات الطلب</div>
+    <div class="row"><span class="k">📦 المنتج</span><span class="v">${esc(order.productName)}</span></div>
+    <div class="row"><span class="k">📅 تاريخ الطلب</span><span class="v">${esc(formatDateAr(order.createdAt))} - ${esc(formatTimeAr(order.createdAt))}</span></div>
+
+    <div class="section-lbl">بيانات الدفع</div>
+    <div class="money-summary">
+      <div class="money-box"><div class="ml">ثمن المنتج</div><div class="mv">${order.price.toFixed(2)}</div></div>
+      <div class="money-box paid"><div class="ml">المقدم</div><div class="mv">${order.paid.toFixed(2)}</div></div>
+      <div class="money-box remaining"><div class="ml">المتبقي</div><div class="mv">${order.remaining.toFixed(2)}</div></div>
+    </div>
+    <p style="text-align:center; font-size:11.5px; color:#A89A85; margin-top:8px;">جميع المبالغ بـ ${esc(cur)}</p>
+
+    ${order.notes ? `<div class="section-lbl">ملاحظات</div><div class="notes-box">${esc(order.notes)}</div>` : ''}
+
+    ${order.images && order.images.length ? `<div class="imgs-note">📷 يحتوي هذا الطلب على ${order.images.length} صورة محفوظة داخل تطبيق المتجر (غير متوفرة في هذه الصفحة)</div>` : ''}
+
+    <div class="foot">تم إنشاء هذا الملخص تلقائياً من نظام طلبات ${esc(storeName)}<br>هذه الصفحة تعمل دون اتصال بالإنترنت</div>
+  </div>
+</div>
+</body></html>`;
+}
+
+function buildOrderDetailDataUrl(order){
+  // kept for potential future use (e.g. preview), not used in the WhatsApp flow
+  // since long data: URLs are unreliable inside wa.me text parameters.
+  const html = buildOrderDetailHTML(order);
+  const base64 = btoa(unescape(encodeURIComponent(html)));
+  return `data:text/html;charset=utf-8;base64,${base64}`;
+}
+
+// ---------- WhatsApp message builder ----------
+function formatDateAr(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('ar-MA', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+function formatTimeAr(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString('ar-MA', {hour:'2-digit', minute:'2-digit'});
+}
+
+function buildWhatsAppMessage(order, includeFileNote){
+  const cur = settings.currency || 'درهم';
+  let note = '';
+  if(includeFileNote){
+    note = `\n\n📎 سيتم إرسال ملف "تفاصيل الطلب" بشكل منفصل — يفتحه المستلم بالضغط عليه ويعمل دون إنترنت.`;
+  }
+  return `🛋️ طلب جديد
+
+🆔 رقم الطلب: ${order.orderNumber}
+
+📅 التاريخ: ${formatDateAr(order.createdAt)}
+⏰ الوقت: ${formatTimeAr(order.createdAt)}
+
+👤 اسم الزبون: ${order.customerName || 'غير محدد'}
+
+📞 الهاتف: ${order.phone}
+
+📦 المنتج:
+${order.productName}
+
+💰 ثمن المنتج: ${order.price.toFixed(2)} ${cur}
+💵 المبلغ المقدم: ${order.paid.toFixed(2)} ${cur}
+📋 المتبقي: ${order.remaining.toFixed(2)} ${cur}
+
+📷 عدد الصور المرفقة: ${order.images.length}
+
+📝 الملاحظات:
+${order.notes || 'لا توجد'}
+
+📌 حالة الطلب:
+${order.status}${note}`;
+}
+
+// Build a real, shareable HTML File object for the order detail page
+function buildOrderDetailFile(order){
+  const html = buildOrderDetailHTML(order);
+  const blob = new Blob([html], { type:'text/html' });
+  const fileName = `تفاصيل-الطلب-${order.orderNumber}.html`;
+  return new File([blob], fileName, { type:'text/html' });
+}
+
+function downloadOrderDetailFile(order){
+  const file = buildOrderDetailFile(order);
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Attempts native share-with-file (opens WhatsApp's own share sheet with the file attached).
+// Falls back to downloading the file if Web Share API / file sharing isn't supported.
+async function shareOrderDetailFile(order){
+  const file = buildOrderDetailFile(order);
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{
+      await navigator.share({
+        files:[file],
+        title:`تفاصيل الطلب ${order.orderNumber}`,
+        text:`📎 ملف تفاصيل الطلب ${order.orderNumber} — يعمل دون إنترنت`
+      });
+      return true;
+    }catch(e){
+      if(e.name === 'AbortError') return false; // user cancelled, don't fallback-download
+      downloadOrderDetailFile(order);
+      showToast('⬇️ تم تنزيل ملف التفاصيل، أرسله يدوياً عبر واتساب');
+      return false;
+    }
+  } else {
+    downloadOrderDetailFile(order);
+    showToast('⬇️ تم تنزيل ملف التفاصيل، أرسله يدوياً عبر واتساب كمرفق');
+    return false;
+  }
+}
+
+async function ensureSavedAndGetOrder(){
+  // Save current form first if not already an existing record being edited fresh
+  if(!validateForm()) return null;
+  if(editingOrderId){
+    await saveOrder();
+    return await dbGet('orders', editingOrderId);
+  } else {
+    await saveOrder();
+    // fetch the last created order (most recent)
+    const all = await dbGetAll('orders');
+    all.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return all[0];
+  }
+}
+
+async function sendToWhatsApp(){
+  const order = await ensureSavedAndGetOrder();
+  if(!order) return;
+  if(!settings.whatsappNumber){
+    showToast('⚠️ أضف رقم واتساب في الإعدادات أولاً');
+    goToPage('page-settings');
+    return;
+  }
+  const canShareFile = !!(navigator.canShare && navigator.canShare({ files:[buildOrderDetailFile(order)] }));
+  const msg = buildWhatsAppMessage(order, canShareFile);
+  const url = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+
+  // After opening WhatsApp with the text message, prompt the share sheet for the detail file.
+  // A short delay avoids the two actions colliding on some mobile browsers.
+  setTimeout(() => { shareOrderDetailFile(order); }, 700);
+}
+
+async function copyMessage(){
+  const order = await ensureSavedAndGetOrder();
+  if(!order) return;
+  const msg = buildWhatsAppMessage(order, false);
+  try{
+    await navigator.clipboard.writeText(msg);
+    showToast('📋 تم نسخ الرسالة');
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = msg;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 تم نسخ الرسالة');
+  }
+}
+
+
+
+// ---------- Print PDF ----------
+async function printOrderPDF(){
+  const order = await ensureSavedAndGetOrder();
+  if(!order) return;
+  renderPrintArea(order);
+  setTimeout(() => window.print(), 150);
+}
+
+async function shareDetailFileForCurrentOrder(){
+  const order = await ensureSavedAndGetOrder();
+  if(!order) return;
+  await shareOrderDetailFile(order);
+}
+
+async function shareDetailFileById(id){
+  const o = await dbGet('orders', id);
+  if(!o) return;
+  await shareOrderDetailFile(o);
+}
+
+function renderPrintArea(order){
+  const cur = settings.currency || 'درهم';
+  document.getElementById('printArea').innerHTML = `
+    <div style="font-family:Tajawal,Arial,sans-serif; direction:rtl;">
+      <h2 style="margin-bottom:4px;">${settings.storeName || 'متجر الأثاث'}</h2>
+      <p style="color:#555; margin-top:0;">طلب رقم: <b>${order.orderNumber}</b></p>
+      <hr>
+      <table style="width:100%; font-size:14px; border-collapse:collapse;">
+        <tr><td style="padding:6px 0;"><b>التاريخ:</b></td><td>${formatDateAr(order.createdAt)} - ${formatTimeAr(order.createdAt)}</td></tr>
+        <tr><td style="padding:6px 0;"><b>اسم الزبون:</b></td><td>${order.customerName || 'غير محدد'}</td></tr>
+        <tr><td style="padding:6px 0;"><b>الهاتف:</b></td><td>${order.phone}</td></tr>
+        <tr><td style="padding:6px 0;"><b>المنتج:</b></td><td>${order.productName}</td></tr>
+        <tr><td style="padding:6px 0;"><b>ثمن المنتج:</b></td><td>${order.price.toFixed(2)} ${cur}</td></tr>
+        <tr><td style="padding:6px 0;"><b>المبلغ المقدم:</b></td><td>${order.paid.toFixed(2)} ${cur}</td></tr>
+        <tr><td style="padding:6px 0;"><b>المتبقي:</b></td><td>${order.remaining.toFixed(2)} ${cur}</td></tr>
+        <tr><td style="padding:6px 0;"><b>الملاحظات:</b></td><td>${order.notes || 'لا توجد'}</td></tr>
+        <tr><td style="padding:6px 0;"><b>الحالة:</b></td><td>${order.status}</td></tr>
+      </table>
+    </div>
+  `;
+}
+
+// ---------- Orders list rendering ----------
+async function renderOrdersList(){
+  allOrdersCache = await dbGetAll('orders');
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+  const statusFilter = document.getElementById('filterStatus').value;
+  const sortDir = document.getElementById('sortOrder').value;
+
+  let filtered = allOrdersCache.filter(o => {
+    const matchSearch = !search ||
+      (o.customerName && o.customerName.toLowerCase().includes(search)) ||
+      (o.phone && o.phone.includes(search)) ||
+      (o.orderNumber && o.orderNumber.toLowerCase().includes(search));
+    const matchStatus = !statusFilter || o.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  filtered.sort((a,b) => {
+    const diff = new Date(a.createdAt) - new Date(b.createdAt);
+    return sortDir === 'asc' ? diff : -diff;
+  });
+
+  // stats (on all orders, not filtered)
+  document.getElementById('statTotal').textContent = allOrdersCache.length;
+  document.getElementById('statNew').textContent = allOrdersCache.filter(o=>o.status==='جديد').length;
+  document.getElementById('statProgress').textContent = allOrdersCache.filter(o=>o.status==='قيد التجهيز').length;
+  document.getElementById('statDone').textContent = allOrdersCache.filter(o=>o.status==='تم التسليم').length;
+  document.getElementById('statCancelled').textContent = allOrdersCache.filter(o=>o.status==='ملغي').length;
+
+  const container = document.getElementById('ordersListContainer');
+  if(filtered.length === 0){
+    container.innerHTML = `<div class="empty-state"><div class="emo">📭</div><div class="t">لا توجد طلبات مطابقة</div><div class="s">جرّب تغيير البحث أو الفلتر</div></div>`;
+    return;
+  }
+  const cur = settings.currency || 'درهم';
+  container.innerHTML = filtered.map(o => `
+    <div class="order-item">
+      <div class="top-row">
+        <div>
+          <div class="order-id">${o.orderNumber}</div>
+          <div class="order-date">${formatDateAr(o.createdAt)} - ${formatTimeAr(o.createdAt)}</div>
+        </div>
+        <span class="status-badge status-${o.status.replace(/\s/g,'_')}">${o.status}</span>
+      </div>
+      <div class="customer">${o.customerName || 'بدون اسم'}</div>
+      <div class="phone">📞 ${o.phone}</div>
+      <div class="product">📦 ${o.productName}</div>
+      <div class="money-row">
+        <span>💰 <b>${o.price.toFixed(2)}</b> ${cur}</span>
+        <span>💵 <b>${o.paid.toFixed(2)}</b> ${cur}</span>
+        <span style="color:${o.remaining>0?'var(--danger)':'var(--ok)'}">📋 <b>${o.remaining.toFixed(2)}</b> ${cur}</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="viewOrder('${o.id}')">عرض</button>
+        <button class="btn btn-outline btn-sm" onclick="editOrder('${o.id}')">تعديل</button>
+        <button class="btn btn-whatsapp btn-sm" onclick="resendWhatsApp('${o.id}')">واتساب</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="askDeleteOrder('${o.id}')">حذف</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ---------- View / Edit / Delete ----------
+function closeModal(){ document.getElementById('orderModal').classList.remove('show'); }
+function closeConfirmModal(){ document.getElementById('confirmModal').classList.remove('show'); }
+
+async function viewOrder(id){
+  const o = await dbGet('orders', id);
+  if(!o) return;
+  const cur = settings.currency || 'درهم';
+  document.getElementById('modalTitle').textContent = `طلب ${o.orderNumber}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:14px; line-height:1.9;">
+      <p><b>👤 الزبون:</b> ${o.customerName || 'غير محدد'}</p>
+      <p><b>📞 الهاتف:</b> <span style="direction:ltr; display:inline-block;">${o.phone}</span></p>
+      <p><b>📦 المنتج:</b> ${o.productName}</p>
+      <p><b>💰 الثمن:</b> ${o.price.toFixed(2)} ${cur} &nbsp; <b>💵 المقدم:</b> ${o.paid.toFixed(2)} ${cur} &nbsp; <b>📋 المتبقي:</b> ${o.remaining.toFixed(2)} ${cur}</p>
+      <p><b>📝 الملاحظات:</b> ${o.notes || 'لا توجد'}</p>
+      <p><b>📌 الحالة:</b> <span class="status-badge status-${o.status.replace(/\s/g,'_')}">${o.status}</span></p>
+      <p><b>📅 أُنشئ:</b> ${formatDateAr(o.createdAt)} - ${formatTimeAr(o.createdAt)}</p>
+      ${o.images.length ? `<p><b>📷 الصور (${o.images.length}):</b></p><div class="img-grid">${o.images.map(im=>`<div class="img-thumb"><img src="${im.dataUrl}"></div>`).join('')}</div>` : ''}
+    </div>
+    <div class="btn-grid" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closeModal(); editOrder('${o.id}')">✏️ تعديل</button>
+      <button class="btn btn-whatsapp" onclick="resendWhatsApp('${o.id}')">📤 واتساب</button>
+    </div>
+    <button class="btn btn-outline" style="margin-top:10px;" onclick="shareDetailFileById('${o.id}')">📎 مشاركة ملف التفاصيل (للمدير)</button>
+  `;
+  document.getElementById('orderModal').classList.add('show');
+}
+
+async function editOrder(id){
+  const o = await dbGet('orders', id);
+  if(!o) return;
+  editingOrderId = id;
+  document.getElementById('customerName').value = o.customerName || '';
+  document.getElementById('customerPhone').value = o.phone || '';
+  document.getElementById('productName').value = o.productName || '';
+  document.getElementById('orderNotes').value = o.notes || '';
+  document.getElementById('orderPrice').value = o.price || '';
+  document.getElementById('orderPaid').value = o.paid || '';
+  document.getElementById('orderStatus').value = o.status || 'جديد';
+  currentImages = [...(o.images || [])];
+  renderImageGrid();
+  calcRemaining();
+  document.getElementById('saveOrderBtn').textContent = '💾 تحديث الطلب';
+  closeModal();
+  goToPage('page-new');
+  showToast('✏️ وضع التعديل: ' + o.orderNumber);
+}
+
+async function resendWhatsApp(id){
+  const o = await dbGet('orders', id);
+  if(!o) return;
+  if(!settings.whatsappNumber){
+    showToast('⚠️ أضف رقم واتساب في الإعدادات أولاً');
+    closeModal();
+    goToPage('page-settings');
+    return;
+  }
+  const canShareFile = !!(navigator.canShare && navigator.canShare({ files:[buildOrderDetailFile(o)] }));
+  const msg = buildWhatsAppMessage(o, canShareFile);
+  const url = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  closeModal();
+  setTimeout(() => { shareOrderDetailFile(o); }, 700);
+}
+
+let pendingDeleteId = null;
+function askDeleteOrder(id){
+  pendingDeleteId = id;
+  document.getElementById('confirmModal').classList.add('show');
+}
+document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+  if(pendingDeleteId){
+    await dbDelete('orders', pendingDeleteId);
+    showToast('🗑️ تم حذف الطلب');
+    pendingDeleteId = null;
+    closeConfirmModal();
+    renderOrdersList();
+  }
+});
+
+// ---------- Dashboard ----------
+async function renderDashboard(){
+  const all = await dbGetAll('orders');
+  const cur = settings.currency || 'درهم';
+  document.getElementById('dTotal').textContent = all.length;
+  document.getElementById('dNew').textContent = all.filter(o=>o.status==='جديد').length;
+  document.getElementById('dDelivered').textContent = all.filter(o=>o.status==='تم التسليم').length;
+
+  const collected = all.reduce((s,o)=> s + (o.paid||0), 0);
+  const remaining = all.reduce((s,o)=> s + (o.remaining||0), 0);
+  document.getElementById('dCollected').textContent = collected.toFixed(2) + ' ' + cur;
+  document.getElementById('dRemaining').textContent = remaining.toFixed(2) + ' ' + cur;
+
+  const recent = [...all].sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt)).slice(0,8);
+  const card = document.getElementById('recentOrdersCard');
+  if(recent.length === 0){
+    card.innerHTML = `<div class="empty-state"><div class="emo">📦</div><div class="t">لا توجد طلبات بعد</div></div>`;
+  } else {
+    card.innerHTML = recent.map(o => `
+      <div class="dash-list-row">
+        <span>${o.orderNumber} — ${o.customerName || 'بدون اسم'}</span>
+        <span class="status-badge status-${o.status.replace(/\s/g,'_')}" style="font-size:11px;">${o.status}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ---------- Backup / Restore ----------
+async function exportBackup(){
+  const orders = await dbGetAll('orders');
+  const settingsData = await dbGet('settings', 'main');
+  const meta = await dbGet('meta', 'counter');
+  const backup = { version:1, exportedAt: new Date().toISOString(), orders, settings: settingsData, meta };
+  const blob = new Blob([JSON.stringify(backup)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `نسخة-احتياطية-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇️ تم تصدير النسخة الاحتياطية');
+}
+
+async function importBackup(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if(!backup.orders) throw new Error('invalid');
+    for(const o of backup.orders){
+      await dbPut('orders', o);
+    }
+    if(backup.settings) await dbPut('settings', backup.settings);
+    if(backup.meta) await dbPut('meta', backup.meta);
+    await loadSettings();
+    showToast('✅ تم استعادة النسخة الاحتياطية');
+    renderOrdersList();
+    renderDashboard();
+  }catch(err){
+    showToast('⚠️ ملف غير صالح');
+  }
+  e.target.value = '';
+}
+
+// ---------- Online/offline indicator ----------
+function updateNetStatus(){
+  const dot = document.getElementById('netDot');
+  const text = document.getElementById('netText');
+  if(navigator.onLine){
+    dot.classList.remove('off');
+    text.textContent = 'متصل بالإنترنت';
+  } else {
+    dot.classList.add('off');
+    text.textContent = 'يعمل دون إنترنت';
+  }
+}
+window.addEventListener('online', updateNetStatus);
+window.addEventListener('offline', updateNetStatus);
+
+// ---------- Profit Tracking Page ----------
+const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'];
+
+function populateProfitFilters(){
+  const monthSel = document.getElementById('profitMonth');
+  const yearSel = document.getElementById('profitYear');
+  if(monthSel.options.length === 0){
+    AR_MONTHS.forEach((m, i) => {
+      const opt = document.createElement('option');
+      opt.value = i; opt.textContent = m;
+      monthSel.appendChild(opt);
+    });
+    monthSel.value = new Date().getMonth();
+  }
+  // years: from earliest order year to current year (at least current year)
+  const years = new Set([new Date().getFullYear()]);
+  allOrdersCache.forEach(o => years.add(new Date(o.createdAt).getFullYear()));
+  const sortedYears = [...years].sort((a,b) => b - a);
+  const prevYearVal = yearSel.value;
+  yearSel.innerHTML = sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+  yearSel.value = prevYearVal && sortedYears.includes(parseInt(prevYearVal)) ? prevYearVal : new Date().getFullYear();
+}
+
+function onProfitPeriodTypeChange(){
+  const type = document.getElementById('profitPeriodType').value;
+  document.getElementById('profitMonth').style.display = type === 'month' ? '' : 'none';
+  document.getElementById('profitYear').style.display = type === 'all' ? 'none' : '';
+  renderProfitPage();
+}
+
+function getFilteredOrdersForProfit(){
+  const type = document.getElementById('profitPeriodType').value;
+  const year = parseInt(document.getElementById('profitYear').value);
+  const month = parseInt(document.getElementById('profitMonth').value);
+  return allOrdersCache.filter(o => {
+    const d = new Date(o.createdAt);
+    if(type === 'all') return true;
+    if(type === 'year') return d.getFullYear() === year;
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+}
+
+async function renderProfitPage(){
+  allOrdersCache = await dbGetAll('orders');
+  populateProfitFilters();
+  onProfitPeriodTypeChangeSilent();
+
+  const cur = settings.currency || 'درهم';
+  const filtered = getFilteredOrdersForProfit();
+  const type = document.getElementById('profitPeriodType').value;
+
+  // exclude cancelled from revenue calcs, but track them separately
+  const active = filtered.filter(o => o.status !== 'ملغي');
+  const cancelled = filtered.filter(o => o.status === 'ملغي');
+
+  const collected = active.reduce((s,o) => s + (o.paid||0), 0);
+  const totalValue = active.reduce((s,o) => s + (o.price||0), 0);
+  const outstanding = active.reduce((s,o) => s + (o.remaining||0), 0);
+  const cancelledValue = cancelled.reduce((s,o) => s + (o.price||0), 0);
+  const avgOrder = active.length ? totalValue / active.length : 0;
+  const collectionRate = totalValue > 0 ? Math.round((collected/totalValue)*100) : 0;
+
+  const labelMap = { month:'صافي المداخيل المحصّلة هذا الشهر', year:'صافي المداخيل المحصّلة هذه السنة', all:'صافي المداخيل المحصّلة (كل الفترات)' };
+  document.getElementById('profitHeroLabel').textContent = labelMap[type];
+  document.getElementById('profitHeroAmount').textContent = collected.toFixed(2) + ' ' + cur;
+  document.getElementById('profitTotalValue').textContent = totalValue.toFixed(2) + ' ' + cur;
+  document.getElementById('profitOutstanding').textContent = outstanding.toFixed(2) + ' ' + cur;
+  document.getElementById('profitOrderCount').textContent = active.length;
+  document.getElementById('profitAvgOrder').textContent = avgOrder.toFixed(2);
+  document.getElementById('profitCollectionRate').textContent = collectionRate + '%';
+  document.getElementById('profitCancelledLoss').textContent = cancelledValue.toFixed(2);
+
+  // best month (across ALL orders, regardless of current filter)
+  const byMonth = {};
+  allOrdersCache.filter(o => o.status !== 'ملغي').forEach(o => {
+    const d = new Date(o.createdAt);
+    const key = d.getFullYear() + '-' + d.getMonth();
+    byMonth[key] = (byMonth[key]||0) + (o.paid||0);
+  });
+  let bestKey = null, bestVal = -1;
+  Object.entries(byMonth).forEach(([k,v]) => { if(v > bestVal){ bestVal = v; bestKey = k; } });
+  if(bestKey){
+    const [by, bm] = bestKey.split('-').map(Number);
+    document.getElementById('profitBestMonth').textContent = AR_MONTHS[bm] + ' ' + by;
+  } else {
+    document.getElementById('profitBestMonth').textContent = '—';
+  }
+
+  renderProfitBarChart(type);
+  renderProfitStatusBreakdown(filtered, cur);
+  renderProfitTopProducts(active, cur);
+  renderProfitCustomerStats(filtered);
+}
+
+// keep dropdown visibility in sync without re-triggering full render loop
+function onProfitPeriodTypeChangeSilent(){
+  const type = document.getElementById('profitPeriodType').value;
+  document.getElementById('profitMonth').style.display = type === 'month' ? '' : 'none';
+  document.getElementById('profitYear').style.display = type === 'all' ? 'none' : '';
+}
+
+function renderProfitBarChart(type){
+  const container = document.getElementById('profitBarChart');
+  const cur = settings.currency || 'درهم';
+  let buckets = []; // {label, value}
+
+  if(type === 'month'){
+    const year = parseInt(document.getElementById('profitYear').value);
+    const month = parseInt(document.getElementById('profitMonth').value);
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const dayTotals = new Array(daysInMonth+1).fill(0);
+    allOrdersCache.filter(o => o.status !== 'ملغي').forEach(o => {
+      const d = new Date(o.createdAt);
+      if(d.getFullYear() === year && d.getMonth() === month){
+        dayTotals[d.getDate()] += (o.paid||0);
+      }
+    });
+    // group into ~6 segments of days for readability on mobile
+    const groupSize = Math.ceil(daysInMonth / 10);
+    for(let start=1; start<=daysInMonth; start+=groupSize){
+      const end = Math.min(start+groupSize-1, daysInMonth);
+      let sum = 0;
+      for(let d=start; d<=end; d++) sum += dayTotals[d];
+      buckets.push({ label: start===end ? `${start}`: `${start}-${end}`, value: sum });
+    }
+  } else if(type === 'year'){
+    const year = parseInt(document.getElementById('profitYear').value);
+    const monthTotals = new Array(12).fill(0);
+    allOrdersCache.filter(o => o.status !== 'ملغي').forEach(o => {
+      const d = new Date(o.createdAt);
+      if(d.getFullYear() === year) monthTotals[d.getMonth()] += (o.paid||0);
+    });
+    buckets = AR_MONTHS.map((m,i) => ({ label: m.slice(0,3), value: monthTotals[i] }));
+  } else {
+    // all time: group by year
+    const yearTotals = {};
+    allOrdersCache.filter(o => o.status !== 'ملغي').forEach(o => {
+      const y = new Date(o.createdAt).getFullYear();
+      yearTotals[y] = (yearTotals[y]||0) + (o.paid||0);
+    });
+    const years = Object.keys(yearTotals).sort();
+    buckets = years.map(y => ({ label: y, value: yearTotals[y] }));
+    if(buckets.length === 0) buckets = [{label: String(new Date().getFullYear()), value:0}];
+  }
+
+  const maxVal = Math.max(...buckets.map(b => b.value), 1);
+  container.innerHTML = buckets.map(b => {
+    const heightPct = Math.max((b.value / maxVal) * 100, b.value > 0 ? 4 : 1.5);
+    const isEmpty = b.value === 0;
+    return `
+      <div class="bc-col" title="${b.value.toFixed(2)} ${cur}">
+        <div class="bc-bar ${isEmpty?'empty-bar':''}" style="height:${heightPct}%"></div>
+        <div class="bc-lbl">${b.label}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderProfitStatusBreakdown(orders, cur){
+  const statuses = ['جديد','قيد التجهيز','جاهز للتسليم','تم التسليم','ملغي'];
+  const colors = {'جديد':'#3A4B8C','قيد التجهيز':'#B8893D','جاهز للتسليم':'#2E6E94','تم التسليم':'#4A6B4F','ملغي':'#A5453C'};
+  const container = document.getElementById('profitStatusBreakdown');
+
+  if(orders.length === 0){
+    container.innerHTML = `<div class="empty-state"><div class="emo">📊</div><div class="t">لا توجد بيانات لهذه الفترة</div></div>`;
+    return;
+  }
+
+  container.innerHTML = statuses.map(st => {
+    const group = orders.filter(o => o.status === st);
+    if(group.length === 0) return '';
+    const value = group.reduce((s,o) => s + (st === 'ملغي' ? o.price : o.paid), 0);
+    return `
+      <div class="breakdown-row">
+        <div class="br-left">
+          <span class="br-dot" style="background:${colors[st]}"></span>
+          <span class="br-name">${st}</span>
+          <span class="br-count">(${group.length})</span>
+        </div>
+        <span class="br-amount">${value.toFixed(2)} ${cur}</span>
+      </div>
+    `;
+  }).join('') || `<div class="empty-state"><div class="emo">📊</div><div class="t">لا توجد بيانات لهذه الفترة</div></div>`;
+}
+
+function renderProfitTopProducts(orders, cur){
+  const container = document.getElementById('profitTopProducts');
+  if(orders.length === 0){
+    container.innerHTML = `<div class="empty-state"><div class="emo">📦</div><div class="t">لا توجد طلبات لهذه الفترة</div></div>`;
+    return;
+  }
+  const productMap = {};
+  orders.forEach(o => {
+    const key = (o.productName || 'غير محدد').trim();
+    if(!productMap[key]) productMap[key] = { revenue:0, count:0 };
+    productMap[key].revenue += (o.paid||0);
+    productMap[key].count += 1;
+  });
+  const sorted = Object.entries(productMap).sort((a,b) => b[1].revenue - a[1].revenue).slice(0,6);
+  container.innerHTML = sorted.map(([name, data], i) => `
+    <div class="top-product-row">
+      <span class="tp-rank">${i+1}</span>
+      <span class="tp-name">${name} <span style="color:#A89A85; font-weight:500;">(${data.count})</span></span>
+      <span class="tp-amount">${data.revenue.toFixed(2)} ${cur}</span>
+    </div>
+  `).join('');
+}
+
+function renderProfitCustomerStats(orders){
+  const phoneMap = {};
+  orders.forEach(o => {
+    const key = o.phone || 'unknown';
+    phoneMap[key] = (phoneMap[key]||0) + 1;
+  });
+  const uniqueCustomers = Object.keys(phoneMap).length;
+  const repeatCustomers = Object.values(phoneMap).filter(c => c > 1).length;
+  document.getElementById('profitUniqueCustomers').textContent = uniqueCustomers;
+  document.getElementById('profitRepeatCustomers').textContent = repeatCustomers;
+}
+
+// ---------- PWA: dynamic manifest + icons + service worker (all inline, single-file) ----------
+function buildAppIconSVG(bg='%232C2420', size=512){
+  // Simple wooden-sofa emoji icon on a brand-colored rounded background
+  return `data:image/svg+xml,
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="20" fill="${bg}"/>
+      <text x="50" y="62" font-size="52" text-anchor="middle">🛋️</text>
+    </svg>`.replace(/\s+/g,' ').trim();
+}
+
+function setupPWA(){
+  const storeName = (settings.storeName || 'متجر الأثاث').trim();
+  const iconUrl = buildAppIconSVG();
+
+  // 1. Dynamic Web App Manifest (built as a Blob so the whole app remains one file)
+  const manifest = {
+    name: storeName + ' - نظام الطلبات',
+    short_name: storeName,
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#F5EFE6',
+    theme_color: '#2C2420',
+    orientation: 'portrait',
+    dir: 'rtl',
+    lang: 'ar',
+    icons: [
+      { src: iconUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+    ]
+  };
+  const manifestBlob = new Blob([JSON.stringify(manifest)], { type:'application/json' });
+  const manifestUrl = URL.createObjectURL(manifestBlob);
+  document.getElementById('manifestLink').setAttribute('href', manifestUrl);
+  document.getElementById('appleTouchIcon').setAttribute('href', iconUrl);
+
+  // 2. Service Worker: registered from a Blob URL so no separate .js file is needed.
+  // It simply caches this exact HTML page so re-opening the installed app works with zero network.
+  if('serviceWorker' in navigator){
+    const swCode = `
+      const CACHE_NAME = 'furniture-app-cache-v1';
+      self.addEventListener('install', (e) => {
+        e.waitUntil(
+          caches.open(CACHE_NAME).then((cache) => cache.add(self.registration.scope))
+        );
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', (e) => { self.clients.claim(); });
+      self.addEventListener('fetch', (e) => {
+        if(e.request.method !== 'GET') return;
+        e.respondWith(
+          caches.match(e.request).then((cached) => cached || fetch(e.request).catch(() => cached))
+        );
+      });
+    `;
+    const swBlob = new Blob([swCode], { type:'application/javascript' });
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(() => {
+      // Silent fail: some browsers restrict Blob-based service workers (e.g. file:// origin).
+      // The app still works fully offline via IndexedDB regardless; this only affects
+      // "installed app" caching, not data storage.
+    });
+  }
+}
+
+
+// ---------- Lock screen / app password ----------
+// The password is never stored in plain text — only its SHA-256 hash is kept in IndexedDB.
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function getStoredPasswordHash(){
+  const rec = await dbGet('meta', 'appPassword');
+  return rec ? rec.value : null;
+}
+
+async function setStoredPasswordHash(hash){
+  await dbPut('meta', { key:'appPassword', value: hash });
+}
+
+function showAppRoot(){
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = '';
+}
+
+async function initLockScreen(){
+  const existingHash = await getStoredPasswordHash();
+  const lockStoreName = document.getElementById('lockStoreName');
+  lockStoreName.textContent = settings.storeName || 'متجر الأثاث';
+
+  const input = document.getElementById('lockPasswordInput');
+  const errMsg = document.getElementById('lockErrorMsg');
+  const unlockBtn = document.getElementById('lockUnlockBtn');
+  const setupBtn = document.getElementById('lockSetupBtn');
+  const subtitle = document.getElementById('lockSubtitle');
+  const resetLink = document.getElementById('lockResetLink');
+
+  if(!existingHash){
+    // First-time use: ask the employee to set a password instead of entering one.
+    subtitle.textContent = 'أول استخدام: عيّن كلمة سر لحماية التطبيق';
+    unlockBtn.style.display = 'none';
+    setupBtn.style.display = '';
+    document.getElementById('lockForgotRow').style.display = 'none';
+
+    setupBtn.onclick = async () => {
+      const pw = input.value.trim();
+      if(pw.length < 4){
+        errMsg.textContent = '⚠️ كلمة السر يجب أن تكون 4 أرقام/حروف على الأقل';
+        errMsg.style.display = 'block';
+        return;
+      }
+      const hash = await hashPassword(pw);
+      await setStoredPasswordHash(hash);
+      showToast('✅ تم تعيين كلمة السر بنجاح');
+      showAppRoot();
+    };
+  } else {
+    unlockBtn.onclick = async () => {
+      const pw = input.value.trim();
+      const hash = await hashPassword(pw);
+      if(hash === existingHash){
+        errMsg.style.display = 'none';
+        showAppRoot();
+      } else {
+        errMsg.style.display = 'block';
+        input.value = '';
+        input.focus();
+      }
+    };
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') unlockBtn.click();
+    });
+
+    resetLink.onclick = (e) => {
+      e.preventDefault();
+      const sure = confirm('إعادة تعيين كلمة السر تتطلب حذف جميع بيانات التطبيق (الطلبات والإعدادات) من هذا الهاتف، لأنه لا يوجد خادم لاستعادتها. إن كان لديك نسخة احتياطية (ملف JSON) يمكنك استعادتها بعد ذلك. هل تريد المتابعة؟');
+      if(sure){
+        indexedDB.deleteDatabase(DB_NAME);
+        showToast('🗑️ تم حذف البيانات، أعد تحميل الصفحة');
+        setTimeout(() => location.reload(), 1200);
+      }
+    };
+  }
+}
+
+
+function lockAppNow(){
+  document.getElementById('lockPasswordInput').value = '';
+  document.getElementById('lockErrorMsg').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('lockScreen').style.display = 'flex';
+}
+
+// ---------- Init ----------
+(async function init(){
+  await openDB();
+  await loadSettings();
+  calcRemaining();
+  updateNetStatus();
+  setupPWA();
+  await initLockScreen();
+})();
+</script>
+</body>
+</html>
